@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Launch Page</title>
+    <!-- Bootstrap CSS CDN -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* General Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background-color: #FFFBEB;
+            overflow-y: auto; /* Enable scrolling */
+        }
+
+        /* Curtain Styles */
+        #curtain {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Each curtain row with full opacity */
+        .curtain-row {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, #8B0000, #FA3D1C); /* Opaque gradient */
+            transform-origin: top;
+            transition: transform 1s ease-in-out;
+        }
+
+        /* Centered, saffron-colored "Open Website" button */
+        #revealButton {
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            color: white;
+            background-color: #FF9933; /* Saffron color */
+            border: none;
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .fade-out {
+            animation: fadeOutButton 3s forwards;
+        }
+
+        @keyframes fadeOutButton {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        #content {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            animation: fadeInContent 1s forwards;
+            animation-delay: 2s;
+        }
+
+        @keyframes fadeInContent {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* MPR Image Scaling */
+        #raama {
+            background-image: url('MPR.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 100%;
+            height: 40vh;
+            margin: 10px 0;
+            animation: shrinkRaama 4s forwards ease-in-out;
+            animation-delay: 16s;
+            opacity: 0;
+        }
+
+        @keyframes shrinkRaama {
+            0% { transform: scale(4); opacity: 0; }
+            100% { transform: scale(0.8); opacity: 1; }
+        }
+
+        /* Header and Section Styling */
+        header {
+            width: 100%;
+            background-color: #FFEDD5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 15px;
+            opacity: 0;
+            animation: fadeInElements 3s forwards ease-in;
+            animation-delay: 20s;
+        }
+
+        @keyframes fadeInElements {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #C05621;
+        }
+
+        .header-shape {
+            width: 30px;
+            height: 30px;
+            background-color: #F97316;
+            border-radius: 50%;
+        }
+
+        section {
+            width: 100%;
+            text-align: center;
+            background-color: #FEF3C7;
+            color: #9A3412;
+            padding: 10px;
+            opacity: 0;
+            animation: fadeInElements 3s forwards ease-in;
+            animation-delay: 21s;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .section-subtitle, .section-highlight {
+            font-size: 1rem;
+        }
+
+        /* Saints Styling */
+        .saint {
+            background-size: cover;
+            background-position: center;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            margin: 5px;
+            opacity: 0;
+            animation: fadeInSaints 3s forwards ease-in;
+        }
+
+        #hanuman {
+            background-image: url('hanuman.jpg');
+            animation-delay: 25s;
+        }
+
+        #jayaraya {
+            background-image: url('jayaraya.jpg');
+            animation-delay: 26s;
+        }
+
+        #vyasaraaja {
+            background-image: url('vyasaraja.jpg');
+            animation-delay: 27s;
+        }
+
+        @keyframes fadeInSaints {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Diyas */
+        #deepaLeft, #deepaRight {
+            position: absolute;
+            width: 120px;
+            height: 300px;
+            background-size: cover;
+            background-repeat: no-repeat;
+            opacity: 0;
+            animation: fadeInElements 3s forwards ease-in;
+            animation-delay: 29s;
+        }
+
+        #deepaLeft {
+            background-image: url('diya.gif');
+            bottom: 5%;
+            left: 3%;
+            transform: scaleX(-1);
+        }
+
+        #deepaRight {
+            background-image: url('diya.gif');
+            bottom: 5%;
+            right: 3%;
+        }
+
+        /* Orange-colored "Launch Tattvachandrika" button */
+        #transitionButton {
+            padding: 10px 20px;
+            font-size: 1rem;
+            opacity: 0;
+            animation: fadeInTransitionButton 2s forwards;
+            animation-delay: 32s;
+            cursor: pointer;
+            background-color: orange; /* Orange color */
+            color: white;
+            border: none;
+        }
+
+        @keyframes fadeInTransitionButton {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* Flower Animation */
+        .flower {
+            position: fixed;
+            background-size: cover;
+            background-position: center;
+            width: 20px;
+            height: 20px;
+            top: -20px;
+            opacity: 0;
+            animation: flowerFall 2s forwards;
+        }
+
+        @keyframes flowerFall {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(100vh) rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Curtain and Launch Button -->
+    <div id="curtain">
+        <!-- 21 Curtain Rows -->
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <div class="curtain-row"></div>
+        <button id="revealButton">Open Website</button>
+    </div>
+    
+    <!-- Content Section with Images -->
+    <div id="content" class="container-fluid d-flex flex-column align-items-center" style="display: none;">
+        <!-- Header with Shapes -->
+        <header class="d-flex justify-content-between align-items-center w-100">
+            <h1 class="header-title">Hari Sarvottama</h1>
+            <img src="Hanuma1.png" alt="hanuma1" class="img-fluid" style="width: 80px; height: 80px; margin-right: 20px;" />
+            <div class="curved-text position-relative d-flex flex-column align-items-center">
+              <svg width="200" height="150">
+                <defs>
+                  <path id="curve" d="M 100, 100 m -80, 0 a 80,80 0 1,1 160,0 a 80,80 0 1,1 -160,0"></path>
+                </defs>
+                <text>
+                  <textPath xlink:href="#curve" startOffset="25%" text-anchor="middle">Sri Moola Gopala Krishno Vijayathe</textPath>
+                </text>
+              </svg>
+              <img src="GopalaKrishna.png" alt="krishna" class="rounded-circle position-absolute" style="top: 50px; left: 50%; transform: translateX(-50%); width: 80px; height: 80px;" />
+            </div>
+            <img src="hanuma2.png" alt="Bheema" class="img-fluid" style="width: 80px; height: 80px; margin-left: 20px;" />
+            <h1 class="header-title">Vaayu Jeevottama</h1>
+          </header>
+
+        <!-- Section with Text -->
+        <section class="text-center w-100">
+            <h2 class="section-title">Sri Jagadguru Sriman Madhvacharya Moola Maha Samsthanam</h2>
+            <h3 class="section-subtitle">Sri Rajendra Tirtha Poorvadi Matha</h3>
+            <h3 class="section-highlight">Sri Vyasaraja Mutt (Sosale)</h3>
+        </section>
+
+        <!-- Raama Component placed just below the section -->
+        <div id="raama"></div>
+
+        <!-- Saints Section in a Row -->
+        <div class="d-flex justify-content-center mt-1">
+            <div id="jayaraya" class="saint"></div>
+            <div id="hanuman" class="saint"></div>
+            <div id="vyasaraaja" class="saint"></div>
+        </div>
+
+        <!-- Centered Launch Button -->
+        <button id="transitionButton" class="btn btn-dark mt-3">Launch Tattvachandrika</button>
+
+        <!-- Diyas -->
+        <div id="deepaLeft"></div>
+        <div id="deepaRight"></div>
+    </div>
+
+    <script>
+        document.getElementById('revealButton').addEventListener('click', function () {
+            document.getElementById('revealButton').classList.add('fade-out');
+
+            const curtainRows = document.querySelectorAll('.curtain-row');
+            curtainRows.forEach((row, index) => {
+                setTimeout(() => {
+                    row.style.transform = 'scaleY(0)';
+                }, (curtainRows.length - index) * 667); // 14 seconds / 21 rows ≈ 667ms delay per row
+            });
+
+            setTimeout(() => {
+                document.getElementById('curtain').style.display = 'none';
+                document.getElementById('content').style.display = 'flex';
+            }, curtainRows.length * 667);
+        });
+
+        document.getElementById('transitionButton').addEventListener('click', function () {
+            const flowerCount = 1000;
+            const flowerImages = ['rose.png', 'hibiscus.png', 'zinnia.png', 'cineraria.png', 'begonia.png'];
+            for (let i = 0; i < flowerCount; i++) {
+                const flower = document.createElement('div');
+                flower.classList.add('flower');
+                const randomFlower = flowerImages[Math.floor(Math.random() * flowerImages.length)];
+                flower.style.backgroundImage = `url(${randomFlower})`;
+                const size = Math.random() * 20 + 20;
+                flower.style.width = `${size}px`;
+                flower.style.height = `${size}px`;
+                flower.style.left = `${Math.random() * 100}vw`;
+                flower.style.animationDelay = `${Math.random()}s`;
+                document.body.appendChild(flower);
+
+                flower.addEventListener('animationend', () => {
+                    flower.remove();
+                });
+            }
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
