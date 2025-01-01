@@ -170,7 +170,7 @@
 </template>
 
 <script>
-import AddEditSubscriberModal from '../components/AddEditSubscriberModal.vue';
+import AddEditSubscriberModal from './AddEditSubscriberModal.vue';
 import ConfirmationModal from './ConfirmationModal.vue';
 import magazineSubscriberService from '../services/magazineSubscriberService';
 

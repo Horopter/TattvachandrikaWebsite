@@ -1,13 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomePage from '../pages/HomePage.vue';
-import SubscriptionModes from '../components/SubscriptionModes.vue';
-import SubscriptionLanguages from '../components/SubscriptionLanguages.vue';
-import SubscriberCategories from '../components/SubscriberCategories.vue';
-import SubscriberTypes from '../components/SubscriberTypes.vue';
-import SubscriptionPlans from '../components/SubscriptionPlans.vue';
-import MagazineSubscribers from '../components/MagazineSubscribers.vue';
-import SubscriberDetails from '../components/MagazineSubscriberDetails.vue';
-import PaymentModes from '../components/PaymentModes.vue';
+import HomePage from '@/views/HomePage.vue';
+import SubscriptionModes from '@/views/SubscriptionModes.vue';
+import SubscriptionLanguages from '@/views/SubscriptionLanguages.vue';
+import SubscriberCategories from '@/views/SubscriberCategories.vue';
+import SubscriberTypes from '@/views/SubscriberTypes.vue';
+import SubscriptionPlans from '@/views/SubscriptionPlans.vue';
+import MagazineSubscribers from '@/views/MagazineSubscribers.vue';
+import SubscriberDetails from '@/views/MagazineSubscriberDetails.vue';
+import PaymentModes from '@/views/PaymentModes.vue';
 import Index from '@/views/index.vue';
 
 const routes = [
