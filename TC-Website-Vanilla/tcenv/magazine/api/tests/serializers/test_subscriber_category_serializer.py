@@ -35,7 +35,6 @@ class TestSubscriberCategorySerializer(TestCase):
         instance = serializer.save()
         self.assertEqual(instance.name, "New Category")
 
-
     def test_partial_update(self):
         instance = SubscriberCategory.objects.create(**self.valid_data)
         serializer = SubscriberCategorySerializer(instance, data={"name": "Updated Domestic"}, partial=True)

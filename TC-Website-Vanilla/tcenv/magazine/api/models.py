@@ -25,8 +25,8 @@ class SubscriptionPlan(me.Document):
     _id = me.StringField(primary_key=True, default=lambda: generate_id('SPLAN', 'subscription_plan'))
     version = me.StringField(max_length=10)
     name = me.StringField(max_length=255)
-    start_date = me.DateField()
-    subscription_price = me.DecimalField()
+    start_date = me.DateField(required=True)
+    subscription_price = me.DecimalField(required=True)
     subscription_language = me.ReferenceField(SubscriptionLanguage, required=True)
     subscription_mode = me.ReferenceField(SubscriptionMode, required=True)
     duration_in_months = me.IntField(required=True)  # Duration in months
@@ -64,7 +64,6 @@ class SubscriptionPlan(me.Document):
                 return f"v{latest_version_number + 1}"
         else:
             return "v1"
-
        
 class PaymentMode(me.Document):
     _id = me.StringField(primary_key=True, default=lambda: generate_id('PMODE', 'payment_mode'))
