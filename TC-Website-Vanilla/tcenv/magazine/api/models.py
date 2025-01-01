@@ -27,11 +27,23 @@ class SubscriptionPlan(me.Document):
     name = me.StringField(max_length=255)
     start_date = me.DateField()
     subscription_price = me.DecimalField()
-    subscription_language = me.ReferenceField(SubscriptionLanguage, null=True)
-    subscription_mode = me.ReferenceField(SubscriptionMode, null=True)
-    duration_in_months = me.IntField()  # Duration in months
+    subscription_language = me.ReferenceField(SubscriptionLanguage, required=True)
+    subscription_mode = me.ReferenceField(SubscriptionMode, required=True)
+    duration_in_months = me.IntField(required=True)  # Duration in months
+
+    def clean(self):
+        """Perform validation checks before saving."""
+        if not self.subscription_language:
+            raise ValueError("Subscription language must be set.")
+        if not self.subscription_mode:
+            raise ValueError("Subscription mode must be set.")
+        if self.subscription_price <= 0:
+            raise ValueError("Subscription price must be a positive number.")
+        if self.duration_in_months <= 0:
+            raise ValueError("Duration in months must be greater than zero.")
 
     def save(self, *args, **kwargs):
+        self.clean()
         self.version = self.generate_version()
         self.name = f"{self.duration_in_months} months - {self.subscription_language.name} - {self.subscription_mode.name}"
         super(SubscriptionPlan, self).save(*args, **kwargs)
@@ -52,7 +64,8 @@ class SubscriptionPlan(me.Document):
                 return f"v{latest_version_number + 1}"
         else:
             return "v1"
-            
+
+       
 class PaymentMode(me.Document):
     _id = me.StringField(primary_key=True, default=lambda: generate_id('PMODE', 'payment_mode'))
     name = me.StringField(max_length=255)

@@ -30,10 +30,26 @@ class SubscriptionPlanSerializer(DocumentSerializer):
         model = SubscriptionPlan
         fields = ('_id', 'version', 'name', 'start_date', 'subscription_price', 'subscription_language', 'subscription_mode', 'duration_in_months')
 
+    def validate_duration_in_months(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Duration in months must be greater than zero.")
+        return value
+
+    def validate_subscription_price(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Subscription price must be a positive number.")
+        return value
+
+
 class PaymentModeSerializer(DocumentSerializer):
     class Meta:
         model = PaymentMode
         fields = ['_id', 'name']
+
+    def validate(self, data):
+        if 'name' not in data or not data['name']:
+            raise serializers.ValidationError({'name': 'This field is required.'})
+        return data
         
 class SubscriptionSerializer(DocumentSerializer):
     subscription_plan = serializers.PrimaryKeyRelatedField(queryset=SubscriptionPlan.objects.all())
