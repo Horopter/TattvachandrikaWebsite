@@ -3,29 +3,19 @@ from rest_framework import serializers
 from .models import MagazineSubscriber, Subscription, SubscriptionPlan, SubscriberCategory, SubscriberType, SubscriptionLanguage, SubscriptionMode, PaymentMode, AdminUser
 
 class SubscriberCategorySerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)
     class Meta:
         model = SubscriberCategory
         fields = ('_id', 'name')
 
 class SubscriberTypeSerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)
     class Meta:
         model = SubscriberType
         fields = ('_id', 'name')
 
 class SubscriptionLanguageSerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)
     class Meta:
         model = SubscriptionLanguage
         fields = ('_id', 'name')
-
-    def validate(self, data):
-        id = data.get('_id')
-        # Check for duplicate ID
-        if SubscriptionLanguage.objects.filter(_id=id).count() > 0:
-            raise serializers.ValidationError({"_id": f"A language with this ID already exists : {id}"})
-        return data
 
 class SubscriptionModeSerializer(DocumentSerializer):
     _id = serializers.CharField(required=True)
@@ -34,7 +24,6 @@ class SubscriptionModeSerializer(DocumentSerializer):
         fields = ('_id', 'name')
 
 class SubscriptionPlanSerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)  # Explicitly include _id
     subscription_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)  # Ensure price is required and has valid decimal format
     duration_in_months = serializers.IntegerField(required=True, min_value=1)  # Ensure duration is required and greater than 0
     
@@ -66,15 +55,10 @@ class SubscriptionPlanSerializer(DocumentSerializer):
         if price <= 0:
             raise serializers.ValidationError({"subscription_price": "Subscription price must be a positive number."})
         
-        # Check for duplicate ID
-        if SubscriptionPlan.objects.filter(_id=data.get('_id')).count() > 0:
-            raise serializers.ValidationError({"_id": "A plan with this ID already exists."})
-        
         return data
 
 
 class PaymentModeSerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)
     class Meta:
         model = PaymentMode
         fields = ['_id', 'name']
@@ -85,7 +69,6 @@ class PaymentModeSerializer(DocumentSerializer):
         return data
         
 class SubscriptionSerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)
     subscription_plan = serializers.PrimaryKeyRelatedField(queryset=SubscriptionPlan.objects.all())
     payment_mode = serializers.PrimaryKeyRelatedField(queryset=PaymentMode.objects.all())
 
@@ -107,7 +90,6 @@ class SubscriptionSerializer(DocumentSerializer):
         return data
 
 class MagazineSubscriberSerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)
     category = serializers.PrimaryKeyRelatedField(queryset=SubscriberCategory.objects.all())
     stype = serializers.PrimaryKeyRelatedField(queryset=SubscriberType.objects.all())
     subscriptions = serializers.SerializerMethodField()
@@ -125,7 +107,6 @@ class MagazineSubscriberSerializer(DocumentSerializer):
         ]
 
 class AdminUserSerializer(DocumentSerializer):
-    _id = serializers.CharField(required=True)
     class Meta:
         model = AdminUser
         fields = [

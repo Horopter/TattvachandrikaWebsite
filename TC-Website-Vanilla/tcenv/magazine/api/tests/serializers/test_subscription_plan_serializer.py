@@ -129,29 +129,6 @@ class TestSubscriptionPlanSerializer(TestCase):
         self.assertIsNotNone(new_plan, "Failed to create SubscriptionPlan.")
         self.assertEqual(new_plan.version, "v2")
 
-    def test_duplicate_id(self):
-        # Confirm the existing plan is saved in the database
-        existing_plan = SubscriptionPlan.objects.get(_id=self.plan._id)
-        self.assertIsNotNone(existing_plan, "The original SubscriptionPlan does not exist in the database.")
-
-        # Prepare duplicate data with the same _id
-        duplicate_data = {
-            "_id": existing_plan._id,  # Use the ID of the already saved plan
-            "version": "v2",
-            "start_date": "2024-05-01",
-            "subscription_price": 300.0,
-            "subscription_language": existing_plan.subscription_language.pk,
-            "subscription_mode": existing_plan.subscription_mode.pk,
-            "duration_in_months": 12,
-        }
-
-        # Initialize serializer with duplicate data
-        serializer = SubscriptionPlanSerializer(data=duplicate_data)
-
-        # Assert validation fails
-        self.assertFalse(serializer.is_valid(), "Serializer should not be valid for duplicate ID.")
-        self.assertIn("_id", serializer.errors, "Duplicate ID validation error not raised.")
-
     def test_invalid_subscription_price(self):
         invalid_data = self.valid_data.copy()
         invalid_data["subscription_price"] = -50.0  # Invalid price

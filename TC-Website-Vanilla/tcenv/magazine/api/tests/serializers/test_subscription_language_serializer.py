@@ -43,15 +43,3 @@ class TestSubscriptionLanguageSerializer(TestCase):
         self.assertTrue(serializer.is_valid())
         updated_instance = serializer.save()
         self.assertEqual(updated_instance.name, "Updated Language")
-
-    def test_duplicate_id(self):
-        serializer = SubscriptionLanguageSerializer(data=self.valid_data)
-        self.assertTrue(serializer.is_valid(), msg=f"Serializer errors: {serializer.errors}")
-        instance = serializer.save()
-        duplicate_data = {
-            "_id": instance._id,  # Use the existing instance ID
-            "name": "Duplicate Language",
-        }
-        serializer = SubscriptionLanguageSerializer(data=duplicate_data)
-        self.assertFalse(serializer.is_valid(), f"Serializer should not validate duplicate '_id': {serializer.errors}")
-        self.assertIn("_id", serializer.errors, "Duplicate '_id' validation error not raised.")
