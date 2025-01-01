@@ -6,80 +6,38 @@
         <li class="text-gray-500"><nuxt-link to="/">Home</nuxt-link></li>
       </ol>
     </nav>
-    <h1
-      class="text-xl font-semibold font-sans underline text-red-500 text-center mt-5"
-    >
-      <div @click="logout" class="logout-button">Logout</div>
-    </h1>
     <ul class="link-list">
       <li class="link-item">
-        <nuxt-link to="/subscriptionModes" class="link"
-          >Manage Subscription Modes</nuxt-link
-        >
+        <nuxt-link to="/subscriptionModes" class="link">Manage Subscription Modes</nuxt-link>
       </li>
       <li class="link-item">
-        <nuxt-link to="/subscriptionLanguages" class="link"
-          >Manage Subscription Languages</nuxt-link
-        >
+        <nuxt-link to="/subscriptionLanguages" class="link">Manage Subscription Languages</nuxt-link>
       </li>
       <li class="link-item">
-        <nuxt-link to="/subscriberCategories" class="link"
-          >Manage Subscriber Categories</nuxt-link
-        >
+        <nuxt-link to="/subscriberCategories" class="link">Manage Subscriber Categories</nuxt-link>
       </li>
       <li class="link-item">
-        <nuxt-link to="/subscriberTypes" class="link"
-          >Manage Subscriber Types</nuxt-link
-        >
+        <nuxt-link to="/subscriberTypes" class="link">Manage Subscriber Types</nuxt-link>
       </li>
       <li class="link-item">
-        <nuxt-link to="/subscriptionPlans" class="link"
-          >Manage Subscription Plans</nuxt-link
-        >
+        <nuxt-link to="/subscriptionPlans" class="link">Manage Subscription Plans</nuxt-link>
       </li>
       <li class="link-item">
-        <nuxt-link to="/paymentModes" class="link"
-          >Manage Payment Modes</nuxt-link
-        >
+        <nuxt-link to="/paymentModes" class="link">Manage Payment Modes</nuxt-link>
       </li>
       <li class="link-item">
-        <nuxt-link to="/MagazineSubscribers" class="link"
-          >Manage Subscribers</nuxt-link
-        >
+        <nuxt-link to="/MagazineSubscribers" class="link">Manage Subscribers</nuxt-link>
+      </li>
+      <li class="link-item">
+        <nuxt-link to="/reports" class="link">Manage Reports</nuxt-link>
       </li>
     </ul>
   </div>
 </template>
 
 <script>
-import axios from "axios";
 export default {
-  name: "HomePage",
-  methods: {
-    async logout() {
-      try {
-        const token = localStorage.getItem("token"); // Retrieve the token
-        const response = await axios.post(
-          "http://localhost:8000/api/adminusers/logout/",
-          { token: token } // Send the token in the request body
-        );
-        
-        // Clear the token from local storage
-        localStorage.removeItem("token");
-
-        // Redirect to login page or homepage
-        this.$router.push({ name: "Login" });
-        this.toastMessage = "Logged out successfully.";
-        this.toastVisible = true; // Show toast message
-      } catch (error) {
-        console.error(
-          "Logout failed:",
-          error.response ? error.response.data : error
-        );
-        alert("Logout failed. Please try again.");
-      }
-    },
-  },
+  name: 'HomePage'
 };
 </script>
 

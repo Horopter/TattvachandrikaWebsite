@@ -4,7 +4,7 @@
     <nav aria-label="breadcrumb" class="mb-4">
       <ol class="flex space-x-2 text-gray-700">
         <li>
-          <router-link to="/" class="text-blue-600 hover:text-blue-800">Home</router-link>
+          <router-link to="/HomePage" class="text-blue-600 hover:text-blue-800">Home</router-link>
         </li>
         <li>
           <span>/</span>

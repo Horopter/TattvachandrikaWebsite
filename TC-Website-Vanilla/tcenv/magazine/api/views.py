@@ -5,7 +5,7 @@ import hashlib
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.decorators import action
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_mongoengine import viewsets
@@ -182,11 +182,19 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def report(self, request):
-        # Get the character limit from the request or use a default value
+        """
+        Fetches filtered subscriber data and returns a formatted report.
+        """
+        # Get query parameters
         char_limit = int(request.query_params.get('char_limit', 42))
+        subscriber_status = request.query_params.get('subscriberStatus', 'active')
+        subscriber_type = request.query_params.get('subscriberType', None)
+        subscriber_category = request.query_params.get('subscriberCategory', None)
 
         # Helper function to split an address into multiple lines based on character limit.
         def split_address(address, char_limit):
+            if not address:
+                return []
             lines = []
             while len(address) > char_limit:
                 split_at = address[:char_limit].rfind(' ')
@@ -197,49 +205,76 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
             lines.append(address)
             return lines
 
-        # Fetch and process all subscribers
-        subscribers = self.get_queryset()
+        # Filter subscribers based on provided filters
+        filters = {}
+        if subscriber_status == 'active':
+            filters['isDeleted'] = False
+        elif subscriber_status == 'inactive':
+            filters['isDeleted'] = True
+
+        if subscriber_type:
+            try:
+                # Fetch the corresponding SubscriberType ID by name
+                subscriber_type_obj = SubscriberType.objects.get(name=subscriber_type)
+                filters['stype'] = subscriber_type_obj.id
+            except SubscriberType.DoesNotExist:
+                raise PermissionDenied(f"Invalid subscriber type: {subscriber_type}")
+
+        if subscriber_category:
+            try:
+                # Fetch the corresponding SubscriberCategory ID by name
+                subscriber_category_obj = SubscriberCategory.objects.get(name=subscriber_category)
+                filters['category'] = subscriber_category_obj.id
+            except SubscriberCategory.DoesNotExist:
+                raise PermissionDenied(f"Invalid subscriber category: {subscriber_category}")
+
+        # Fetch and process subscribers
+        subscribers = self.get_queryset().filter(**filters)
         report = []
         for subscriber in subscribers:
             address_lines = split_address(subscriber.address, char_limit)
             report.append({
                 "Name": subscriber.name,
+                "Active": not subscriber.isDeleted,  # True for active, False for inactive
+                "Category": subscriber.category.name if subscriber.category else "N/A",
+                "Type": subscriber.stype.name if subscriber.stype else "N/A",
                 "Address line 1": address_lines[0] if len(address_lines) > 0 else "",
                 "Address line 2": address_lines[1] if len(address_lines) > 1 else "",
-                "City": subscriber.city_town,
-                "District": subscriber.district,
-                "State": subscriber.state,
-                "Pincode": subscriber.pincode,
-                "Phone Number": subscriber.phone,
+                "City": subscriber.city_town or "",
+                "District": subscriber.district or "",
+                "State": subscriber.state or "",
+                "Pincode": subscriber.pincode or "",
+                "Phone Number": subscriber.phone or "",
             })
 
         return Response(report, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
-    def generate_report_dummy(self, request):
+    def generate_pdf_report(self, request):
         """
-        Generates a PDF report with 2 columns, 5 rows, clear boundaries, and adjusted layout using dummy data.
+        Generates a PDF report with subscriber data fetched from the database, skipping empty strings.
+        Includes <status, category, type> in the header of each page.
         """
         try:
-            # Dummy subscriber data
-            dummy_subscriber = {
-                "Name": "John Doe " + "X" * 28,
-                "Address line 1": "123 Elm Street " + "Y" * 25,
-                "Address line 2": "Apartment 4B " + "Z" * 28,
-                "City": "Springfield " + "A" * 14,
-                "District": "Sangamon " + "B" * 17,
-                "State": "Illinois " + "C" * 18,
-                "Pincode": "62704 " + "D" * 20,
-                "Phone Number": "123-456-7890 " + "E" * 25,
-            }
-
-            report_data = [dummy_subscriber] * 12  # Repeat the same subscriber 18 times
-
+            # Fetch data from the report endpoint
             char_limit = int(request.query_params.get('char_limit', 42))
+            subscriber_status = request.query_params.get('subscriberStatus', 'active')
+            subscriber_type = request.query_params.get('subscriberType', None) or "ALL"
+            subscriber_category = request.query_params.get('subscriberCategory', None) or "ALL"
+            report_data = self.report(request).data  # Use the existing `report` function to fetch data
 
             # Initialize FPDF
             pdf = FPDF()
-            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+
+            def add_page_with_header():
+                pdf.add_page()
+                pdf.set_font("Arial", size=11, style='B')
+                header = f"Status: {subscriber_status.capitalize()} | Category: {subscriber_category} | Type: {subscriber_type}"
+                pdf.cell(0, 10, header, align='C', ln=True)
+                pdf.ln(5)  # Add some space after the header to separate from the content
+
+            add_page_with_header()  # Add the first page with the header
 
             # Set base font size and other layout parameters
             base_font_size = 11
@@ -250,9 +285,7 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
             page_height = 297  # A4 page height in mm
             margin = 10  # Page margin
             usable_width = page_width - 2 * margin
-            usable_height = page_height - 2 * margin
-
-            # Calculate box and column dimensions
+            usable_height = page_height - 2 * margin - 15  # Adjust for header
             column_width = usable_width / 2  # Two columns
             box_height = usable_height / 5  # Five rows per column
 
@@ -264,11 +297,11 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
 
                 # Start a new page after 10 entries (5 rows per column * 2 columns)
                 if index > 0 and index % 10 == 0:
-                    pdf.add_page()
+                    add_page_with_header()
 
                 # Calculate position
                 x_position = margin + (column * column_width)
-                y_position = margin + (row * box_height)
+                y_position = margin + (row * box_height) + 15  # Offset to avoid header overlap
 
                 # Draw a rectangle for the boundary
                 pdf.rect(x_position, y_position, column_width, box_height)
@@ -292,7 +325,7 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
                 # Write the values, skipping empty ones
                 for value in values:
                     if value:  # Skip empty strings or None
-                        truncated_value = value[:char_limit-3] + "..." if len(value) > char_limit else value
+                        truncated_value = value[:char_limit - 3] + "..." if len(value) > char_limit else value
                         pdf.cell(column_width - 4, 7, truncated_value, ln=True)  # Reduced line height
                         pdf.set_xy(x_position + 2, pdf.get_y())
 
@@ -308,21 +341,55 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
             # Handle errors gracefully
             return Response({"error": str(e)}, status=500)
 
+
     @action(detail=False, methods=['get'])
-    def generate_pdf_report(self, request):
+    def generate_report_dummy(self, request):
         """
-        Generates a PDF report with subscriber data fetched from the database, skipping empty strings.
+        Generates a PDF report with distinct dummy subscriber data for testing purposes.
         """
+        import random
+        import string
+
         try:
-            # Fetch data from the report endpoint
+            # Generate distinct dummy data
+            def create_dummy_entry(index, category, stype):
+                return {
+                    "Name": f"Subscriber {index} " + ''.join(random.choices(string.ascii_uppercase, k=5)),
+                    "Address line 1": f"{random.randint(1, 999)} Elm Street",
+                    "Address line 2": f"Apartment {random.randint(1, 50)}B",
+                    "City": f"City-{index}",
+                    "District": f"District-{random.randint(1, 10)}",
+                    "State": f"State-{random.randint(1, 5)}",
+                    "Pincode": f"{random.randint(100000, 999999)}",
+                    "Phone Number": f"{random.randint(100, 999)}-{random.randint(1000, 9999)}-{random.randint(1000, 9999)}",
+                    "Category": category,
+                    "Type": stype,
+                }
+
+            filters = [
+                ("active", "Domestic", "Regular", 15),
+                ("active", "NRI", "Donor", 21),
+            ]
+
+            # Generate distinct dummy data for each filter combination
+            report_data = []
+            for status, category, stype, count in filters:
+                report_data += [create_dummy_entry(i + 1, category, stype) for i in range(count)]
+
             char_limit = int(request.query_params.get('char_limit', 42))
-            report_data = self.report(request).data  # Use the existing `report` function to fetch data
 
             # Initialize FPDF
             pdf = FPDF()
-            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
 
-            # Set base font size and other layout parameters
+            def add_page_with_header(status, category, stype):
+                pdf.add_page()
+                pdf.set_font("Arial", size=11, style='B')
+                header = f"Status: {status.capitalize()} | Category: {category or 'ALL'} | Type: {stype or 'ALL'}"
+                pdf.cell(0, 10, header, align='C', ln=True)
+                pdf.ln(5)  # Add some space after the header
+
+            # Set base font size and layout parameters
             base_font_size = 11
             pdf.set_font("Arial", size=base_font_size)
 
@@ -331,25 +398,34 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
             page_height = 297  # A4 page height in mm
             margin = 10  # Page margin
             usable_width = page_width - 2 * margin
-            usable_height = page_height - 2 * margin
-
-            # Calculate box and column dimensions
+            usable_height = page_height - 2 * margin - 15  # Adjust for header
             column_width = usable_width / 2  # Two columns
             box_height = usable_height / 5  # Five rows per column
 
-            # Draw table boundaries and add values
-            for index, subscriber in enumerate(report_data):
-                # Determine column and row positions for column-wise filling
-                column = index % 2  # 0 = first column, 1 = second column
-                row = (index // 2) % 5  # 5 rows per column
+            current_filter_index = 0  # Track which filter set we are rendering
+            entries_in_current_filter = 0  # Count entries per filter set
 
-                # Start a new page after 10 entries (5 rows per column * 2 columns)
-                if index > 0 and index % 10 == 0:
-                    pdf.add_page()
+            for index, subscriber in enumerate(report_data):
+                # Switch filter set when reaching its limit
+                if (
+                    (current_filter_index == 0 and entries_in_current_filter >= 15)
+                    or (current_filter_index == 1 and entries_in_current_filter >= 21)
+                ):
+                    current_filter_index += 1
+                    entries_in_current_filter = 0
+
+                # Add a new page with the current filter's header
+                if entries_in_current_filter % 10 == 0:  # 10 entries per page
+                    status, category, stype, _ = filters[current_filter_index]
+                    add_page_with_header(status, category, stype)
+
+                # Determine column and row positions for column-wise filling
+                column = entries_in_current_filter % 2  # 0 = first column, 1 = second column
+                row = (entries_in_current_filter // 2) % 5  # 5 rows per column
 
                 # Calculate position
                 x_position = margin + (column * column_width)
-                y_position = margin + (row * box_height)
+                y_position = margin + (row * box_height) + 15  # Offset to avoid header overlap
 
                 # Draw a rectangle for the boundary
                 pdf.rect(x_position, y_position, column_width, box_height)
@@ -373,9 +449,11 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
                 # Write the values, skipping empty ones
                 for value in values:
                     if value:  # Skip empty strings or None
-                        truncated_value = value[:char_limit-3] + "..." if len(value) > char_limit else value
+                        truncated_value = value[:char_limit - 3] + "..." if len(value) > char_limit else value
                         pdf.cell(column_width - 4, 7, truncated_value, ln=True)  # Reduced line height
                         pdf.set_xy(x_position + 2, pdf.get_y())
+
+                entries_in_current_filter += 1  # Increment entries for the current filter set
 
             # Output PDF to response
             pdf_output = pdf.output(dest='S').encode('latin1')
