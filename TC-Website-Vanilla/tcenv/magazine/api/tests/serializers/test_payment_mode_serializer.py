@@ -1,10 +1,28 @@
 from django.test import TestCase
+from mongoengine import connect, disconnect
 from api.serializers import PaymentModeSerializer
 from api.models import PaymentMode
 import uuid
 
 
 class TestPaymentModeSerializer(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Connect to the test MongoDB database
+        cls.connection = connect(
+            db="test_database",  # Replace with your test database name
+            host="mongodb://localhost:27017/test_database",  # Update the host if needed
+            alias="test2"
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        # Drop the test database and disconnect
+        cls.connection.drop_database("test_database")
+        disconnect(alias="test2")
+
     def setUp(self):
         self.valid_data = {"_id": str(uuid.uuid4()), "name": "Credit Card"}
         self.invalid_data_missing_name = {"_id": str(uuid.uuid4())}

@@ -1,10 +1,28 @@
 from django.test import TestCase
+from mongoengine import connect, disconnect
 from api.serializers import MagazineSubscriberSerializer
 from api.models import MagazineSubscriber, SubscriberCategory, SubscriberType
 import uuid
 
 
 class TestMagazineSubscriberSerializer(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Connect to the test MongoDB database
+        cls.connection = connect(
+            db="test_database",  # Replace with your test database name
+            host="mongodb://localhost:27017/test_database",  # Update the host if needed
+            alias="test1"
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        # Drop the test database and disconnect
+        cls.connection.drop_database("test_database")
+        disconnect(alias="test1")
+
     def setUp(self):
         self.tearDown()
         self.category = SubscriberCategory.objects.create(_id=str(uuid.uuid4()), name="Domestic")
