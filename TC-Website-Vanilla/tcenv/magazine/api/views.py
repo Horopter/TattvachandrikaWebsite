@@ -341,7 +341,6 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
             # Handle errors gracefully
             return Response({"error": str(e)}, status=500)
 
-
     @action(detail=False, methods=['get'])
     def generate_report_dummy(self, request):
         """
@@ -349,6 +348,9 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
         """
         import random
         import string
+        from fpdf import FPDF
+        from django.http import HttpResponse
+        from rest_framework.response import Response
 
         try:
             # Generate distinct dummy data
@@ -367,8 +369,8 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
                 }
 
             filters = [
-                ("active", "Domestic", "Regular", 15),
-                ("active", "NRI", "Donor", 21),
+                ("active", "Domestic", "Regular", 37),
+                ("active", "NRI", "Donor", 41),
             ]
 
             # Generate distinct dummy data for each filter combination
@@ -377,51 +379,50 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
                 report_data += [create_dummy_entry(i + 1, category, stype) for i in range(count)]
 
             char_limit = int(request.query_params.get('char_limit', 42))
+            cols = int(request.query_params.get('cols', 4))  # Default to 4 columns
+            rows = int(request.query_params.get('rows', 6))  # Default to 6 rows
 
-            # Initialize FPDF
-            pdf = FPDF()
+            # Initialize FPDF in landscape mode
+            pdf = FPDF(orientation='L', unit='mm', format='A4')
             pdf.set_auto_page_break(auto=True, margin=15)
+            pdf.set_font("Arial", size=8)  # Set font size to 9
 
             def add_page_with_header(status, category, stype):
                 pdf.add_page()
-                pdf.set_font("Arial", size=11, style='B')
+                pdf.set_font("Arial", style='B', size=8)  # Header slightly larger
                 header = f"Status: {status.capitalize()} | Category: {category or 'ALL'} | Type: {stype or 'ALL'}"
                 pdf.cell(0, 10, header, align='C', ln=True)
-                pdf.ln(5)  # Add some space after the header
-
-            # Set base font size and layout parameters
-            base_font_size = 11
-            pdf.set_font("Arial", size=base_font_size)
+                pdf.ln(5)
 
             # Layout parameters
-            page_width = 210  # A4 page width in mm
-            page_height = 297  # A4 page height in mm
+            page_width = 297  # A4 landscape width in mm
+            page_height = 210  # A4 landscape height in mm
             margin = 10  # Page margin
             usable_width = page_width - 2 * margin
-            usable_height = page_height - 2 * margin - 15  # Adjust for header
-            column_width = usable_width / 2  # Two columns
-            box_height = usable_height / 5  # Five rows per column
+            usable_height = page_height - 2 * margin - 10  # Adjust for header
+            column_width = usable_width / cols
+            box_height = usable_height / rows
 
-            current_filter_index = 0  # Track which filter set we are rendering
+            current_filter_index = 0  # Track current filter set
             entries_in_current_filter = 0  # Count entries per filter set
 
-            for index, subscriber in enumerate(report_data):
+            for _, subscriber in enumerate(report_data):
                 # Switch filter set when reaching its limit
                 if (
-                    (current_filter_index == 0 and entries_in_current_filter >= 15)
-                    or (current_filter_index == 1 and entries_in_current_filter >= 21)
+                    (current_filter_index == 0 and entries_in_current_filter >= 37)
+                    or (current_filter_index == 1 and entries_in_current_filter >= 41)
                 ):
                     current_filter_index += 1
                     entries_in_current_filter = 0
 
                 # Add a new page with the current filter's header
-                if entries_in_current_filter % 10 == 0:  # 10 entries per page
+                if entries_in_current_filter % (cols * rows) == 0:  # Fit dynamically based on columns and rows
                     status, category, stype, _ = filters[current_filter_index]
                     add_page_with_header(status, category, stype)
 
-                # Determine column and row positions for column-wise filling
-                column = entries_in_current_filter % 2  # 0 = first column, 1 = second column
-                row = (entries_in_current_filter // 2) % 5  # 5 rows per column
+                # Determine column and row positions
+                column = entries_in_current_filter % cols
+                row = (entries_in_current_filter // cols) % rows
 
                 # Calculate position
                 x_position = margin + (column * column_width)
@@ -450,7 +451,7 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
                 for value in values:
                     if value:  # Skip empty strings or None
                         truncated_value = value[:char_limit - 3] + "..." if len(value) > char_limit else value
-                        pdf.cell(column_width - 4, 7, truncated_value, ln=True)  # Reduced line height
+                        pdf.cell(column_width - 4, 3, truncated_value, ln=True)  # Reduced line height
                         pdf.set_xy(x_position + 2, pdf.get_y())
 
                 entries_in_current_filter += 1  # Increment entries for the current filter set
