@@ -1,7 +1,5 @@
 # Third-party libraries
 import hashlib
-import unicodedata
-from io import BytesIO
 
 # Rest Framework
 from rest_framework import status
@@ -12,9 +10,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_mongoengine import viewsets
 
-# ReportLab
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+# FPDF
+from fpdf import FPDF
+from django.http import HttpResponse
 
 # Local app models
 from .models import (
@@ -185,7 +183,7 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def report(self, request):
         # Get the character limit from the request or use a default value
-        char_limit = int(request.query_params.get('char_limit', 50))
+        char_limit = int(request.query_params.get('char_limit', 42))
 
         # Helper function to split an address into multiple lines based on character limit.
         def split_address(address, char_limit):
@@ -222,10 +220,6 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
         """
         Generates a PDF report with 2 columns, 5 rows, clear boundaries, and adjusted layout using dummy data.
         """
-        from fpdf import FPDF
-        from django.http import HttpResponse
-        from rest_framework.response import Response
-
         try:
             # Dummy subscriber data
             dummy_subscriber = {
@@ -239,89 +233,9 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
                 "Phone Number": "123-456-7890 " + "E" * 25,
             }
 
-            data = [dummy_subscriber] * 10  # Repeat the same subscriber 10 times
+            report_data = [dummy_subscriber] * 12  # Repeat the same subscriber 18 times
 
-            # Initialize FPDF
-            pdf = FPDF()
-            pdf.add_page()
-
-            # Set base font size (increased by 2 from the default)
-            base_font_size = 11
-            pdf.set_font("Arial", size=base_font_size)
-
-            # Layout parameters
-            page_width = 210  # A4 page width in mm
-            page_height = 297  # A4 page height in mm
-            margin = 10  # Page margin
-            usable_width = page_width - 2 * margin
-            usable_height = page_height - 2 * margin
-
-            # Calculate box and column dimensions
-            column_width = usable_width / 2  # Two columns
-            box_height = usable_height / 5  # Five rows per column
-
-            # Draw table boundaries and add values
-            for index, subscriber in enumerate(data):
-                column = index // 5  # Calculate column (0 or 1)
-                row = index % 5  # Calculate row (0 to 4)
-
-                # Start a new page if needed
-                if column >= 2:
-                    pdf.add_page()
-                    column = 0
-                    row = 0
-
-                # Calculate position
-                x_position = margin + (column * column_width)
-                y_position = margin + (row * box_height)
-
-                # Draw a rectangle for the boundary
-                pdf.rect(x_position, y_position, column_width, box_height)
-
-                # Write subscriber details inside the rectangle
-                values = [
-                    subscriber["Name"],
-                    subscriber["Address line 1"],
-                    subscriber["Address line 2"],
-                    f"{subscriber['City']}, {subscriber['District']}",
-                    f"{subscriber['State']}, {subscriber['Pincode']}",
-                    subscriber["Phone Number"],
-                ]
-                current_y = y_position + 2  # Padding inside the rectangle
-                pdf.set_xy(x_position + 2, current_y)  # Start writing with padding
-
-                # Write the values with adjusted font size
-                for value in values:
-                    truncated_value = value[:37] + "..." if len(value) > 40 else value
-                    pdf.cell(column_width - 4, 7, truncated_value, ln=True)  # Reduced line height
-                    pdf.set_xy(x_position + 2, pdf.get_y())
-
-
-            # Output PDF to response
-            pdf_output = pdf.output(dest='S').encode('latin1')
-            return HttpResponse(
-                pdf_output,
-                content_type="application/pdf",
-                headers={"Content-Disposition": 'attachment; filename="subscriber_report.pdf"'},
-            )
-
-        except Exception as e:
-            # Handle errors gracefully
-            return Response({"error": str(e)}, status=500)
-
-    @action(detail=False, methods=['get'])
-    def generate_pdf_report(self, request):
-        """
-        Generates a PDF report with subscriber data fetched from the database, skipping empty strings.
-        """
-        from fpdf import FPDF
-        from django.http import HttpResponse
-        from rest_framework.response import Response
-
-        try:
-            # Fetch data from the report endpoint
-            char_limit = int(request.query_params.get('char_limit', 50))
-            report_data = self.report(request).data  # Use the existing `report` function to fetch data
+            char_limit = int(request.query_params.get('char_limit', 42))
 
             # Initialize FPDF
             pdf = FPDF()
@@ -344,14 +258,13 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
 
             # Draw table boundaries and add values
             for index, subscriber in enumerate(report_data):
-                column = index // 5  # Calculate column (0 or 1)
-                row = index % 5  # Calculate row (0 to 4)
+                # Determine column and row positions for column-wise filling
+                column = index % 2  # 0 = first column, 1 = second column
+                row = (index // 2) % 5  # 5 rows per column
 
-                # Start a new page if needed
-                if column >= 2:
+                # Start a new page after 10 entries (5 rows per column * 2 columns)
+                if index > 0 and index % 10 == 0:
                     pdf.add_page()
-                    column = 0
-                    row = 0
 
                 # Calculate position
                 x_position = margin + (column * column_width)
@@ -379,7 +292,88 @@ class MagazineSubscriberViewSet(viewsets.ModelViewSet):
                 # Write the values, skipping empty ones
                 for value in values:
                     if value:  # Skip empty strings or None
-                        truncated_value = value[:42] + "..." if len(value) > 45 else value
+                        truncated_value = value[:char_limit-3] + "..." if len(value) > char_limit else value
+                        pdf.cell(column_width - 4, 7, truncated_value, ln=True)  # Reduced line height
+                        pdf.set_xy(x_position + 2, pdf.get_y())
+
+            # Output PDF to response
+            pdf_output = pdf.output(dest='S').encode('latin1')
+            return HttpResponse(
+                pdf_output,
+                content_type="application/pdf",
+                headers={"Content-Disposition": 'attachment; filename="subscriber_report.pdf"'},
+            )
+
+        except Exception as e:
+            # Handle errors gracefully
+            return Response({"error": str(e)}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def generate_pdf_report(self, request):
+        """
+        Generates a PDF report with subscriber data fetched from the database, skipping empty strings.
+        """
+        try:
+            # Fetch data from the report endpoint
+            char_limit = int(request.query_params.get('char_limit', 42))
+            report_data = self.report(request).data  # Use the existing `report` function to fetch data
+
+            # Initialize FPDF
+            pdf = FPDF()
+            pdf.add_page()
+
+            # Set base font size and other layout parameters
+            base_font_size = 11
+            pdf.set_font("Arial", size=base_font_size)
+
+            # Layout parameters
+            page_width = 210  # A4 page width in mm
+            page_height = 297  # A4 page height in mm
+            margin = 10  # Page margin
+            usable_width = page_width - 2 * margin
+            usable_height = page_height - 2 * margin
+
+            # Calculate box and column dimensions
+            column_width = usable_width / 2  # Two columns
+            box_height = usable_height / 5  # Five rows per column
+
+            # Draw table boundaries and add values
+            for index, subscriber in enumerate(report_data):
+                # Determine column and row positions for column-wise filling
+                column = index % 2  # 0 = first column, 1 = second column
+                row = (index // 2) % 5  # 5 rows per column
+
+                # Start a new page after 10 entries (5 rows per column * 2 columns)
+                if index > 0 and index % 10 == 0:
+                    pdf.add_page()
+
+                # Calculate position
+                x_position = margin + (column * column_width)
+                y_position = margin + (row * box_height)
+
+                # Draw a rectangle for the boundary
+                pdf.rect(x_position, y_position, column_width, box_height)
+
+                # Handle None/null values
+                def sanitize(value):
+                    return str(value) if value not in [None, 'null', 'None', ""] else None
+
+                # Write subscriber details inside the rectangle
+                values = [
+                    sanitize(subscriber.get("Name")),
+                    sanitize(subscriber.get("Address line 1")),
+                    sanitize(subscriber.get("Address line 2")),
+                    sanitize(f"{subscriber.get('City', '')}, {subscriber.get('District', '')}".strip(", ")),
+                    sanitize(f"{subscriber.get('State', '')}, {subscriber.get('Pincode', '')}".strip(", ")),
+                    sanitize(subscriber.get("Phone Number")),
+                ]
+                current_y = y_position + 2  # Padding inside the rectangle
+                pdf.set_xy(x_position + 2, current_y)  # Start writing with padding
+
+                # Write the values, skipping empty ones
+                for value in values:
+                    if value:  # Skip empty strings or None
+                        truncated_value = value[:char_limit-3] + "..." if len(value) > char_limit else value
                         pdf.cell(column_width - 4, 7, truncated_value, ln=True)  # Reduced line height
                         pdf.set_xy(x_position + 2, pdf.get_y())
 

@@ -18,4 +18,4 @@ setuptools==70.3.0
 sqlparse  # No specific version
 tzdata==2024.1
 uritemplate==4.1.1
-reportlab
+fpdf
