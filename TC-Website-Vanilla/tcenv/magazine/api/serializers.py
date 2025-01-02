@@ -1,5 +1,6 @@
 from rest_framework_mongoengine.serializers import DocumentSerializer
 from rest_framework import serializers
+import datetime
 from .models import MagazineSubscriber, Subscription, SubscriptionPlan, SubscriberCategory, SubscriberType, SubscriptionLanguage, SubscriptionMode, PaymentMode, AdminUser
 
 class SubscriberCategorySerializer(DocumentSerializer):
@@ -77,16 +78,33 @@ class SubscriptionSerializer(DocumentSerializer):
         fields = '__all__'
 
     def validate(self, data):
-        if 'subscription_plan' in data and isinstance(data['subscription_plan'], str):
-            try:
-                data['subscription_plan'] = SubscriptionPlan.objects.get(pk=data['subscription_plan'])
-            except SubscriptionPlan.DoesNotExist:
-                raise ValidationError({'subscription_plan': 'SubscriptionPlan matching query does not exist.'})
-        if 'payment_mode' in data and isinstance(data['payment_mode'], str):
-            try:
-                data['payment_mode'] = PaymentMode.objects.get(pk=data['payment_mode'])
-            except PaymentMode.DoesNotExist:
-                raise ValidationError({'payment_mode': 'PaymentMode matching query does not exist.'})
+        # Validate payment_mode
+        payment_mode_id = data.get('payment_mode')
+        if payment_mode_id and PaymentMode.objects.filter(pk=payment_mode_id.pk).count() == 0:
+            raise serializers.ValidationError({"payment_mode": "Payment mode does not exist."})
+
+        # Validate subscription_plan
+        subscription_plan_id = data.get('subscription_plan')
+        if subscription_plan_id and SubscriptionPlan.objects.filter(pk=subscription_plan_id.pk).count() == 0:
+            raise serializers.ValidationError({"subscription_plan": "Subscription plan does not exist."})
+
+        # Validate date logic
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        if start_date and end_date and end_date <= start_date:
+            raise serializers.ValidationError({"end_date": "End date must be after start date."})
+
+        # Check for duplicate subscriptions
+        subscriber = data.get('subscriber')
+        if (
+            subscriber
+            and subscription_plan_id
+            and Subscription.objects.filter(
+                subscriber=subscriber, subscription_plan=subscription_plan_id
+            ).count() > 0
+        ):
+            raise serializers.ValidationError("Duplicate subscription not allowed.")
+
         return data
 
 class MagazineSubscriberSerializer(DocumentSerializer):
